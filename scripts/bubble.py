@@ -16,7 +16,7 @@ import webbrowser
 ROOT = Path(__file__).resolve().parents[1]
 HTML = ROOT / "assets" / "index.html"
 SCHEMA = ROOT / "assets" / "response.schema.json"
-MODEL = os.environ.get("BUBBLE_MODEL", "gpt-5.6-sol")
+MODEL = os.environ.get("BUBBLE_MODEL", "gpt-6-sol")
 
 
 def prompt_for(data):
