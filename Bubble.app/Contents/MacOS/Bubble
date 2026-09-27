@@ -1,0 +1,4 @@
+#!/bin/zsh
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+bubble_dir="$(cd "$(dirname "$0")/../../.." && pwd)"
+exec python3 "$bubble_dir/scripts/bubble.py" "$@"

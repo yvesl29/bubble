@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bubble — faire émerger une intention</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f5f3ef; --ink:#212734; --muted:#617085; --line:#c6d0dd; --card:#fff; --accent:#2c61d6; --soft:#eaf0ff; --warm:#f5e9d7; --danger:#a43c35; }
+    @media (prefers-color-scheme:dark) { :root { --bg:#151a23; --ink:#eef2f8; --muted:#abb8ca; --line:#46536a; --card:#222b39; --accent:#8badff; --soft:#263757; --warm:#453b2c; --danger:#ff9f97; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:radial-gradient(circle at 15% 0%,var(--soft),transparent 30%),var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,sans-serif; }
+    button,textarea,input { font:inherit; }
+    button { cursor:pointer; }
+    button:disabled { cursor:wait; opacity:.65; }
+    .shell { max-width:1100px; margin:auto; padding:24px clamp(16px,3vw,32px) 60px; }
+    header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:28px; }
+    .brand { font-size:1.45rem; font-weight:700; letter-spacing:-.04em; }
+    .style-control { display:flex; align-items:center; gap:8px; }
+    .style-picker { width:min(390px,calc(100vw - 90px)); }
+    .style-range { width:100%; margin:0; accent-color:var(--accent); cursor:pointer; }
+    .style-range:focus-visible,.style-help:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    .style-labels { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin-top:2px; font-size:.78rem; }
+    .style-labels span:nth-child(2) { text-align:center; }
+    .style-labels span:nth-child(3) { text-align:right; }
+    .style-choice { color:var(--muted); }
+    .style-choice.active { color:var(--ink); font-weight:700; }
+    .style-help { position:relative; display:grid; place-items:center; width:21px; height:21px; border:1px solid var(--line); border-radius:50%; background:var(--card); color:var(--muted); font-size:.8rem; font-weight:700; cursor:help; }
+    .style-tooltip { display:none; position:absolute; right:0; top:calc(100% + 8px); z-index:5; width:210px; padding:9px 11px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); box-shadow:0 8px 24px rgba(23,42,79,.12); font-size:.82rem; font-weight:400; text-align:left; }
+    .style-help:hover .style-tooltip,.style-help:focus-visible .style-tooltip { display:block; }
+    .brand-mark { display:inline-grid; place-items:center; background:var(--accent); color:var(--bg); width:30px; height:30px; border-radius:50%; margin-right:8px; font-size:1.1rem; }
+    .kicker { color:var(--muted); font-size:.9rem; margin:0 0 8px; }
+    h1 { font-size:clamp(1.8rem,4vw,2.8rem); line-height:1.12; letter-spacing:-.045em; max-width:760px; margin:0 0 12px; }
+    h2 { font-size:1.07rem; margin:0 0 10px; }
+    p { margin:0 0 14px; }
+    .intro { color:var(--muted); max-width:680px; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:20px; }
+    .entry { max-width:720px; margin:28px 0; }
+    textarea,input[type=text] { width:100%; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:12px 14px; resize:vertical; }
+    textarea { min-height:90px; }
+    textarea:focus,input:focus,button:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    .actions { display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin-top:12px; }
+    .button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:9px 15px; min-height:42px; }
+    .button:hover:not(:disabled) { border-color:var(--accent); }
+    .button.primary { background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:650; }
+    .button.quiet { background:transparent; }
+    .button.danger { color:var(--danger); }
+    .notice { background:var(--soft); border-radius:14px; padding:12px 15px; margin:18px 0; }
+    .error { color:var(--danger); border:1px solid var(--danger); border-radius:12px; padding:10px 13px; margin:14px 0; }
+    .workspace { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:22px; align-items:start; }
+    .graph-area { min-width:0; }
+    .graph { position:relative; min-height:310px; padding:18px 4px 8px; }
+    .edges { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+    .center-row { position:relative; z-index:1; display:flex; justify-content:center; padding:12px 0 38px; }
+    .bubble { border:1px solid var(--line); background:var(--card); box-shadow:0 9px 28px rgba(23,42,79,.07); border-radius:24px; }
+    .center-bubble { max-width:500px; width:100%; padding:18px 20px; background:var(--soft); border-color:var(--accent); }
+    .bubble-label { color:var(--muted); display:block; font-size:.75rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; margin-bottom:8px; }
+    .center-bubble .text { font-size:1.08rem; font-weight:600; white-space:pre-wrap; }
+    .node-grid { position:relative; z-index:1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
+    .node { min-height:125px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; }
+    .node-choice { width:100%; flex:1; border:0; background:transparent; color:var(--ink); padding:18px; text-align:left; font-weight:600; line-height:1.35; }
+    .node-choice:hover:not(:disabled) { background:var(--soft); }
+    .node-actions { display:flex; flex-wrap:wrap; border-top:1px solid var(--line); }
+    .node-actions button { border:0; background:transparent; color:var(--accent); padding:8px 12px; font-size:.86rem; }
+    .node-actions button:hover:not(:disabled) { background:var(--soft); }
+    .node-alt { flex:1; text-align:left; }
+    .node-actions .node-accept { flex:0 0 44px; border-left:1px solid var(--line); text-align:center; font-size:1.2rem; font-weight:700; }
+    .below { margin-top:20px; }
+    .below label { display:block; margin-bottom:7px; font-weight:600; }
+    .side { position:sticky; top:20px; }
+    .side ol { padding-left:23px; margin:10px 0 0; }
+    .side li { margin-bottom:16px; }
+    .line-text { white-space:pre-wrap; }
+    .mini-actions { display:flex; gap:10px; margin-top:5px; }
+    .mini-actions button { border:0; padding:0; background:transparent; color:var(--accent); font-size:.84rem; }
+    .mini-actions button.remove { color:var(--danger); }
+    .empty { color:var(--muted); }
+    .status { color:var(--muted); margin-top:12px; min-height:22px; }
+    .final-text { white-space:pre-wrap; width:100%; min-height:150px; }
+    @media (max-width:800px) { .workspace { grid-template-columns:1fr; } .side { position:static; } }
+    @media (max-width:520px) { header { align-items:start; } .node-grid { grid-template-columns:1fr; } .center-row { padding-bottom:24px; } .graph { min-height:0; } }
+  </style>
+</head>
+<body>
+  <div id="app" class="shell"></div>
+  <script>
+    const KEY = 'bubble.session.v1';
+    const VALIDATED_KEY = 'bubble.validated.v1';
+    const fresh = () => ({raw:'',lines:[],mode:'start',nodes:[],questionNodes:[],selected:'',answer:'',candidate:'',rejected:[],ready:false,style:'simple'});
+    let state;
+    try { state = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { state = fresh(); }
+    function validatedSnapshot() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(VALIDATED_KEY) || 'null');
+        if(saved && saved.raw === state.raw && Array.isArray(saved.lines)) return saved;
+      } catch {}
+      return null;
+    }
+    const savedLines = validatedSnapshot();
+    if(savedLines) state.lines = [...savedLines.lines];
+    let busy = false, error = '', editing = -1, retryRequest = null;
+    const app = document.getElementById('app');
+    function saveValidated() { localStorage.setItem(VALIDATED_KEY, JSON.stringify({raw:state.raw,lines:state.lines})); }
+    function save() {
+      const saved = validatedSnapshot();
+      if(saved) state.lines = [...saved.lines];
+      else saveValidated();
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
+    function el(tag, className='', text='') { const x=document.createElement(tag); if(className) x.className=className; if(text) x.textContent=text; return x; }
+    function button(text, fn, style='') { const x=el('button','button '+style,text); x.type='button'; x.disabled=busy; x.addEventListener('click',fn); return x; }
+    function base() { return {raw:state.raw,lines:state.lines,selected:state.selected,answer:state.answer,rejected:state.rejected,style:state.style}; }
+    async function run(kind, extra, commit) {
+      if(busy) return;
+      busy=true; error=''; retryRequest=null; render();
+      try {
+        const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...base(),...extra,kind})});
+        const data=await res.json();
+        if(!res.ok) throw new Error(data.error || 'La génération a échoué.');
+        commit(data); save();
+      } catch(e) { error=e.message || 'Erreur inconnue.'; retryRequest=()=>run(kind,extra,commit); }
+      busy=false; render();
+    }
+    function questions() { state.mode='explore'; state.nodes=[]; state.selected=''; state.answer=''; state.candidate=''; state.rejected=[]; state.ready=false; save(); run('questions',{},d=>{state.nodes=d.items;state.questionNodes=d.items;state.ready=d.ready;}); }
+    function selectQuestion(text) { state.selected=text; state.answer=''; state.rejected=[]; state.mode='focus'; state.nodes=[]; save(); run('answers',{},d=>{state.nodes=d.items;}); }
+    function selectAnswer(text) { state.answer=text; state.mode='review'; state.candidate=text; save(); render(); }
+    function replaceOne(text,index) {
+      state.rejected=[...state.rejected,text];
+      const kind=state.mode==='focus'?'replace_answer':'replace_question';
+      state.nodes.splice(index,1);
+      if(state.mode==='explore') state.questionNodes=[...state.nodes];
+      save();
+      run(kind,{selected:state.mode==='focus'?state.selected:text,existing:state.nodes},d=>{
+        const replacement=d.items.find(x=>x && !state.nodes.includes(x) && !state.rejected.includes(x));
+        if(replacement) state.nodes.splice(index,0,replacement);
+        else error='Aucune autre piste utile trouvée pour celle-ci.';
+        if(state.mode==='explore') state.questionNodes=[...state.nodes];
+      });
+    }
+    function more() {
+      const previousRejected=[...state.rejected];
+      state.rejected=[...new Set([...state.rejected,...state.nodes])];
+      const kind=state.mode==='focus'?'replace_answer':'more_questions';
+      run(kind,{},d=>{
+        if(d.items.length) state.nodes=d.items;
+        else {state.rejected=previousRejected;error=state.mode==='focus'?'Aucune autre réponse utile trouvée.':'Aucune autre hypothèse utile trouvée pour l’instant.';}
+        if(state.mode==='explore'){state.questionNodes=[...state.nodes];state.ready=d.ready;}
+      });
+    }
+    function draftCustom(value) { const text=value.trim(); if(!text) return; state.answer=text; state.mode='review'; state.candidate=text; save(); render(); }
+    function reformulate() {
+      const text=(document.getElementById('candidate')?.value||state.candidate).trim();
+      if(!text){error='La ligne ne peut pas être vide.';render();return;}
+      state.candidate=text;save();
+      run('line',{answer:text},d=>{state.candidate=d.candidate;});
+    }
+    function acceptLine(text) { const value=text.trim(); if(!value){error='La ligne ne peut pas être vide.';render();return;} state.lines.push(value);saveValidated();state.selected='';state.answer='';state.candidate='';state.rejected=[];questions(); }
+    function accept() { acceptLine(document.getElementById('candidate')?.value||''); }
+    function reject() {
+      const index=state.nodes.indexOf(state.answer);
+      state.rejected=[...state.rejected,state.answer];
+      if(index>=0) state.nodes.splice(index,1);
+      state.mode='focus';state.answer='';state.candidate='';save();
+      run('replace_answer',{existing:state.nodes},d=>{
+        const replacement=d.items.find(x=>x && !state.nodes.includes(x) && !state.rejected.includes(x));
+        if(replacement) state.nodes.splice(index>=0?index:state.nodes.length,0,replacement);
+        else error='Aucune autre piste utile trouvée pour celle-ci.';
+      });
+    }
+    function returnToChoices() {state.mode=state.selected?'focus':'explore';state.answer='';state.candidate='';save();render();}
+    function back() {state.mode='explore';state.nodes=[...state.questionNodes];state.selected='';state.answer='';state.candidate='';state.rejected=[];save();render();}
+    function reset() {if(!confirm('Commencer une nouvelle idée ? La session actuelle sera remplacée.'))return;const style=state.style;state=fresh();state.style=style;saveValidated();save();render();}
+    function drawEdges() {
+      const graph=document.querySelector('.graph'), svg=document.querySelector('.edges'), center=document.querySelector('.center-bubble');
+      if(!graph||!svg||!center) return;
+      const g=graph.getBoundingClientRect(), c=center.getBoundingClientRect();
+      svg.innerHTML='';
+      document.querySelectorAll('.node').forEach(node=>{
+        const n=node.getBoundingClientRect();
+        const x1=c.left+c.width/2-g.left,y1=c.bottom-g.top,x2=n.left+n.width/2-g.left,y2=n.top-g.top;
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',`M ${x1} ${y1} C ${x1} ${(y1+y2)/2}, ${x2} ${(y1+y2)/2}, ${x2} ${y2}`);
+        path.setAttribute('fill','none');path.setAttribute('stroke','var(--line)');path.setAttribute('stroke-width','2');svg.appendChild(path);
+      });
+    }
+    function render() {
+      app.replaceChildren();
+      const head=el('header');const brand=el('div','brand');brand.append(el('span','brand-mark','●'),document.createTextNode('Bubble'));head.append(brand);
+      const styleValues=['simple','precise','detailed'],styleNames=['Simple et clair','Précis et soutenu','Réponses détaillées'];
+      const styleControl=el('div','style-control'),stylePicker=el('div','style-picker');
+      const styleInput=el('input','style-range');styleInput.type='range';styleInput.min='0';styleInput.max='2';styleInput.step='1';styleInput.value=String(Math.max(0,styleValues.indexOf(state.style)));styleInput.setAttribute('aria-label','Style des réponses');styleInput.setAttribute('aria-valuetext',styleNames[Number(styleInput.value)]);
+      const styleLabels=el('div','style-labels'),styleLabelItems=styleNames.map((name,index)=>el('span','style-choice'+(index===Number(styleInput.value)?' active':''),name));styleLabels.append(...styleLabelItems);
+      styleInput.addEventListener('input',()=>{const index=Number(styleInput.value);state.style=styleValues[index];styleInput.setAttribute('aria-valuetext',styleNames[index]);styleLabelItems.forEach((item,i)=>item.classList.toggle('active',i===index));save();});
+      stylePicker.append(styleInput,styleLabels);
+      const styleHelp=el('button','style-help','?');styleHelp.type='button';styleHelp.setAttribute('aria-label','Le type de réponse est configurable dans le skill Bubble.');styleHelp.append(el('span','style-tooltip','Le type de réponse est configurable dans le skill Bubble.'));
+      styleControl.append(stylePicker,styleHelp);head.append(styleControl);
+      if(state.raw) head.append(button('Nouvelle idée',reset,'quiet'));
+      app.append(head);
+      if(!state.raw) {
+        app.append(el('p','kicker','UNE IDÉE À LA FOIS'),el('h1','', 'Fais émerger ce que tu veux vraiment obtenir.'),el('p','intro','Pars d’une phrase brute. Explore les questions ouvertes dans un graphe et valide chaque précision avant qu’elle rejoigne ton intention.'));
+        const box=el('section','panel entry');const label=el('label','','Ton idée brute');label.htmlFor='raw';const input=el('textarea');input.id='raw';input.placeholder='Par exemple : créer un tutoriel pour préparer un VPS sécurisé';
+        const actions=el('div','actions');actions.append(button('Explorer l’idée',()=>{const value=input.value.trim();if(!value){error='Écris d’abord une idée.';render();return;}const style=state.style;state=fresh();state.style=style;state.raw=value;questions();},'primary'));
+        box.append(label,input,actions);app.append(box);if(error) app.append(el('div','error',error));return;
+      }
+      const titles={explore:'Quelles lectures de ton idée restent ouvertes ?',focus:'Explore cette question',review:'Valide une seule ligne'};
+      app.append(el('p','kicker',state.mode==='explore'?'INTENTION EN COURS':state.mode==='focus'?'QUESTION CHOISIE':'LIGNE CANDIDATE'),el('h1','',titles[state.mode]||titles.explore));
+      if(error) {const problem=el('div','error');problem.append(el('div','',error));if(retryRequest)problem.append(button('Réessayer',retryRequest));app.append(problem);}
+      if(state.ready&&state.mode==='explore') app.append(el('div','notice','Cette intention semble assez claire pour commencer. Tu peux t’arrêter ici ou poursuivre l’exploration.'));
+      const layout=el('div','workspace'), main=el('section','graph-area'), side=el('aside','panel side');
+      const graph=el('div','graph'), svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('edges');svg.setAttribute('aria-hidden','true');graph.append(svg);
+      const centerRow=el('div','center-row'), center=el('div','bubble center-bubble');
+      center.append(el('span','bubble-label',state.mode==='focus'?'Question':state.mode==='review'&&state.selected?'Question choisie':'Idée actuelle'));
+      center.append(el('div','text',state.mode==='focus'||state.mode==='review'&&state.selected?state.selected:[state.raw,...state.lines].join('\n• ')));
+      centerRow.append(center);graph.append(centerRow);
+      if(state.mode!=='review') {
+        const grid=el('div','node-grid');state.nodes.forEach((text,index)=>{
+          const node=el('div','bubble node');const choose=el('button','node-choice',text);choose.type='button';choose.disabled=busy;choose.addEventListener('click',()=>state.mode==='explore'?selectQuestion(text):selectAnswer(text));
+          const actions=el('div','node-actions');
+          const alt=el('button','node-alt','↻ Autres pistes pour celle-ci');alt.type='button';alt.disabled=busy;alt.addEventListener('click',()=>replaceOne(text,index));actions.append(alt);
+          if(state.mode==='focus') {const quick=el('button','node-accept','✓');quick.type='button';quick.disabled=busy;quick.setAttribute('aria-label','Valider cette formulation');quick.title='Valider cette formulation';quick.addEventListener('click',()=>acceptLine(text));actions.append(quick);}
+          node.append(choose,actions);grid.append(node);
+        });graph.append(grid);
+      }
+      main.append(graph);
+      const controls=el('div','below');
+      if(state.mode==='explore'||state.mode==='focus') {
+        const acts=el('div','actions');if(state.mode==='focus')acts.append(button('← Revenir à l’idée',back));acts.append(button(state.mode==='focus'?'D’autres réponses':'D’autres hypothèses',more));controls.append(acts);
+        const label=el('label','',state.mode==='focus'?'Ou réponds avec tes propres mots':'Ou ajoute ta propre précision');label.htmlFor='custom';
+        const input=el('input');input.type='text';input.id='custom';input.placeholder=state.mode==='focus'?'Ta réponse…':'Ta précision…';
+        const custom=el('div','actions');custom.append(button('Utiliser ma formulation',()=>draftCustom(input.value),'primary'));controls.append(label,input,custom);
+      } else {
+        const label=el('label','','Tu peux modifier cette ligne avant validation');label.htmlFor='candidate';const input=el('textarea');input.id='candidate';input.value=state.candidate;input.addEventListener('input',()=>{state.candidate=input.value;save();});
+        const acts=el('div','actions');acts.append(button('Valider telle quelle',accept,'primary'),button('Reformuler avec Codex',reformulate),button('Refuser et voir d’autres pistes',reject),button('← Revenir aux pistes',returnToChoices));controls.append(label,input,acts);
+      }
+      controls.append(el('div','status',busy?'Bubble cherche des propositions…':''));main.append(controls);
+      side.append(el('h2','','Lignes validées'));if(!state.lines.length) side.append(el('p','empty','Aucune pour l’instant. Une piste choisie ne devient une ligne qu’après ta validation.'));
+      const list=el('ol');state.lines.forEach((line,index)=>{
+        const item=el('li');if(editing===index){const field=el('textarea');field.value=line;item.append(field);const actions=el('div','mini-actions');const saveBtn=el('button','','Enregistrer');saveBtn.addEventListener('click',()=>{const value=field.value.trim();if(!value)return;state.lines[index]=value;saveValidated();editing=-1;questions();});actions.append(saveBtn);item.append(actions);}else{item.append(el('div','line-text',line));const actions=el('div','mini-actions');const edit=el('button','','Modifier');edit.addEventListener('click',()=>{editing=index;render();});const remove=el('button','remove','Supprimer');remove.addEventListener('click',()=>{state.lines.splice(index,1);saveValidated();editing=-1;questions();});actions.append(edit,remove);item.append(actions);}list.append(item);
+      });side.append(list);
+      const copy=button('Copier l’intention',async()=>{await navigator.clipboard.writeText([state.raw,...state.lines].join('\n'));copy.textContent='Copié';});side.append(copy);
+      layout.append(main,side);app.append(layout);requestAnimationFrame(drawEdges);
+    }
+    window.addEventListener('resize',()=>requestAnimationFrame(drawEdges));
+    render();
+  </script>
+</body>
+</html>

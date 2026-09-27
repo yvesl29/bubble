@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "items": { "type": "array", "items": { "type": "string" } },
+    "candidate": { "type": "string" },
+    "ready": { "type": "boolean" }
+  },
+  "required": ["items", "candidate", "ready"],
+  "additionalProperties": false
+}
